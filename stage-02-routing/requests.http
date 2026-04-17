@@ -1,0 +1,54 @@
+### Health Check
+GET http://localhost:8080/health
+
+###
+
+### List all users
+GET http://localhost:8080/api/v1/users
+
+###
+
+### Get user by ID
+GET http://localhost:8080/api/v1/users/1
+
+###
+
+### Get user by ID (not found)
+GET http://localhost:8080/api/v1/users/999
+
+###
+
+### Create a new user
+POST http://localhost:8080/api/v1/users
+Content-Type: application/json
+
+{
+  "name": "Ketaki",
+  "email": "ketaki@example.com"
+}
+
+###
+
+### Create user — missing fields (should return 400)
+POST http://localhost:8080/api/v1/users
+Content-Type: application/json
+
+{
+  "name": "No Email"
+}
+
+###
+
+### Update a user
+PUT http://localhost:8080/api/v1/users/1
+Content-Type: application/json
+
+{
+  "name": "Akshad Jaiswal Updated",
+  "email": "akshad.updated@example.com"
+}
+
+###
+
+### Delete a user
+DELETE http://localhost:8080/api/v1/users/2
