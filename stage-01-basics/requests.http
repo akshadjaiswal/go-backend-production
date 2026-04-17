@@ -1,0 +1,12 @@
+### Health Check
+GET http://localhost:8080/health
+
+###
+
+### Hello with name
+GET http://localhost:8080/hello?name=Akshad
+
+###
+
+### Hello without name (defaults to World)
+GET http://localhost:8080/hello
