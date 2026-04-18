@@ -1,0 +1,55 @@
+### Health check (no API key needed)
+GET http://localhost:8080/health
+
+###
+
+### List users — no API key (should return 401)
+GET http://localhost:8080/api/v1/users
+
+###
+
+### List users — wrong API key (should return 401)
+GET http://localhost:8080/api/v1/users
+X-API-Key: wrong-key
+
+###
+
+### List users — valid API key
+GET http://localhost:8080/api/v1/users
+X-API-Key: secret-key-123
+
+###
+
+### Get user by ID — valid API key
+GET http://localhost:8080/api/v1/users/1
+X-API-Key: secret-key-123
+
+###
+
+### Create user — valid API key
+POST http://localhost:8080/api/v1/users
+Content-Type: application/json
+X-API-Key: secret-key-123
+
+{
+  "name": "Ketaki",
+  "email": "ketaki@example.com"
+}
+
+###
+
+### Update user — valid API key
+PUT http://localhost:8080/api/v1/users/1
+Content-Type: application/json
+X-API-Key: secret-key-123
+
+{
+  "name": "Akshad Updated",
+  "email": "akshad.new@example.com"
+}
+
+###
+
+### Delete user — valid API key
+DELETE http://localhost:8080/api/v1/users/2
+X-API-Key: secret-key-123
