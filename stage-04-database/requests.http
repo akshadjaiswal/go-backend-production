@@ -1,0 +1,62 @@
+### Health check
+GET http://localhost:8080/health
+
+###
+
+### List all users
+GET http://localhost:8080/api/v1/users
+X-API-Key: secret-key-123
+
+###
+
+### Get user by ID (replace with a real UUID from the list response)
+GET http://localhost:8080/api/v1/users/REPLACE_WITH_REAL_UUID
+X-API-Key: secret-key-123
+
+###
+
+### Get user — not found
+GET http://localhost:8080/api/v1/users/00000000-0000-0000-0000-000000000000
+X-API-Key: secret-key-123
+
+###
+
+### Create a new user
+POST http://localhost:8080/api/v1/users
+Content-Type: application/json
+X-API-Key: secret-key-123
+
+{
+  "name": "Ketaki",
+  "email": "ketaki@example.com"
+}
+
+###
+
+### Create user — duplicate email (should return 409 Conflict)
+POST http://localhost:8080/api/v1/users
+Content-Type: application/json
+X-API-Key: secret-key-123
+
+{
+  "name": "Duplicate",
+  "email": "akshad@example.com"
+}
+
+###
+
+### Update a user (replace UUID)
+PUT http://localhost:8080/api/v1/users/REPLACE_WITH_REAL_UUID
+Content-Type: application/json
+X-API-Key: secret-key-123
+
+{
+  "name": "Akshad Jaiswal Updated",
+  "email": "akshad.updated@example.com"
+}
+
+###
+
+### Delete a user (replace UUID)
+DELETE http://localhost:8080/api/v1/users/REPLACE_WITH_REAL_UUID
+X-API-Key: secret-key-123
