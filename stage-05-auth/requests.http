@@ -1,0 +1,77 @@
+### Health check (no auth)
+GET http://localhost:8080/health
+
+###
+
+### Register a new user
+POST http://localhost:8080/auth/register
+Content-Type: application/json
+
+{
+  "name": "Akshad Jaiswal",
+  "email": "akshad@example.com",
+  "password": "password123"
+}
+
+###
+
+### Register — duplicate email (should return 409)
+POST http://localhost:8080/auth/register
+Content-Type: application/json
+
+{
+  "name": "Duplicate",
+  "email": "akshad@example.com",
+  "password": "password123"
+}
+
+###
+
+### Login — get JWT token
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{
+  "email": "akshad@example.com",
+  "password": "password123"
+}
+
+###
+
+### Login — wrong password (should return 401)
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{
+  "email": "akshad@example.com",
+  "password": "wrongpassword"
+}
+
+###
+
+### List users — no token (should return 401)
+GET http://localhost:8080/api/v1/users
+
+###
+
+### List users — invalid token (should return 401)
+GET http://localhost:8080/api/v1/users
+Authorization: Bearer invalid.token.here
+
+###
+
+### List users — valid token (copy token from login response)
+GET http://localhost:8080/api/v1/users
+Authorization: Bearer PASTE_TOKEN_HERE
+
+###
+
+### Create user — valid token
+POST http://localhost:8080/api/v1/users
+Content-Type: application/json
+Authorization: Bearer PASTE_TOKEN_HERE
+
+{
+  "name": "Ketaki",
+  "email": "ketaki@example.com"
+}
