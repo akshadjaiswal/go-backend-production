@@ -1,0 +1,118 @@
+### Health check
+GET http://localhost:8080/health
+
+###
+
+### Register — valid
+POST http://localhost:8080/auth/register
+Content-Type: application/json
+
+{
+  "name": "Akshad Jaiswal",
+  "email": "akshad@examplee.com",
+  "password": "password123"
+}
+
+###
+
+### Register — missing name (422 validation error)
+POST http://localhost:8080/auth/register
+Content-Type: application/json
+
+{
+  "email": "akshad@example.com",
+  "password": "password123"
+}
+
+###
+
+### Register — invalid email format (422)
+POST http://localhost:8080/auth/register
+Content-Type: application/json
+
+{
+  "name": "Akshad",
+  "email": "not-an-email",
+  "password": "password123"
+}
+
+###
+
+### Register — password too short (422)
+POST http://localhost:8080/auth/register
+Content-Type: application/json
+
+{
+  "name": "Akshad",
+  "email": "akshad2@example.com",
+  "password": "abc"
+}
+
+###
+
+### Register — multiple errors at once (422)
+POST http://localhost:8080/auth/register
+Content-Type: application/json
+
+{
+  "name": "A",
+  "email": "bademail",
+  "password": "123"
+}
+
+###
+
+### Login — valid (copy token for protected routes below)
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{
+  "email": "akshad@example.com",
+  "password": "password123"
+}
+
+###
+
+### Login — missing email (422)
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{
+  "password": "password123"
+}
+
+###
+
+### List users — valid token
+GET http://localhost:8080/api/v1/users
+Authorization: Bearer PASTE_TOKEN_HERE
+
+###
+
+### Get user — invalid UUID (400)
+GET http://localhost:8080/api/v1/users/not-a-uuid
+Authorization: Bearer PASTE_TOKEN_HERE
+
+###
+
+### Create user — validation errors (422)
+POST http://localhost:8080/api/v1/users
+Content-Type: application/json
+Authorization: Bearer PASTE_TOKEN_HERE
+
+{
+  "name": "",
+  "email": "bademail"
+}
+
+###
+
+### Update user — valid (replace UUID)
+PUT http://localhost:8080/api/v1/users/REPLACE_WITH_UUID
+Content-Type: application/json
+Authorization: Bearer PASTE_TOKEN_HERE
+
+{
+  "name": "Akshad Updated",
+  "email": "akshad.updated@example.com"
+}
