@@ -1,0 +1,112 @@
+### Health check
+GET http://localhost:8080/health
+
+###
+
+### Register — create a new user
+POST http://localhost:8080/auth/register
+Content-Type: application/json
+
+{
+  "name": "Akshad Jaiswal",
+  "email": "akshad@example.com",
+  "password": "password123"
+}
+
+###
+
+### Register — missing name (expect 422)
+POST http://localhost:8080/auth/register
+Content-Type: application/json
+
+{
+  "email": "akshad@example.com",
+  "password": "password123"
+}
+
+###
+
+### Register — duplicate email (expect 409 after running Register above)
+POST http://localhost:8080/auth/register
+Content-Type: application/json
+
+{
+  "name": "Akshad Jaiswal",
+  "email": "akshad@example.com",
+  "password": "password123"
+}
+
+###
+
+### Login — copy the token from the response
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{
+  "email": "akshad@example.com",
+  "password": "password123"
+}
+
+###
+
+### Login — wrong password (expect 401)
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{
+  "email": "akshad@example.com",
+  "password": "wrongpassword"
+}
+
+###
+
+### List users — valid token (expect 200)
+GET http://localhost:8080/api/v1/users
+Authorization: Bearer PASTE_TOKEN_HERE
+
+###
+
+### List users — no token (expect 401)
+GET http://localhost:8080/api/v1/users
+
+###
+
+### Create user
+POST http://localhost:8080/api/v1/users
+Content-Type: application/json
+Authorization: Bearer PASTE_TOKEN_HERE
+
+{
+  "name": "Ketaki",
+  "email": "ketaki@example.com"
+}
+
+###
+
+### Get user — paste a real UUID from a previous response
+GET http://localhost:8080/api/v1/users/PASTE_USER_ID_HERE
+Authorization: Bearer PASTE_TOKEN_HERE
+
+###
+
+### Get user — invalid UUID (expect 400)
+GET http://localhost:8080/api/v1/users/not-a-uuid
+Authorization: Bearer PASTE_TOKEN_HERE
+
+###
+
+### Update user
+PUT http://localhost:8080/api/v1/users/PASTE_USER_ID_HERE
+Content-Type: application/json
+Authorization: Bearer PASTE_TOKEN_HERE
+
+{
+  "name": "Ketaki Updated",
+  "email": "ketaki.updated@example.com"
+}
+
+###
+
+### Delete user (expect 204 no content)
+DELETE http://localhost:8080/api/v1/users/PASTE_USER_ID_HERE
+Authorization: Bearer PASTE_TOKEN_HERE
