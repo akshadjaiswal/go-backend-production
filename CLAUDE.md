@@ -24,8 +24,8 @@ A step-by-step Go backend learning project. Each stage is self-contained and bui
 | stage-06-validation | ✅ Done | go-playground/validator, field-level errors |
 | stage-07-config | ✅ Done | godotenv, Config struct, fail-fast |
 | stage-08-logging | ✅ Done | Structured JSON logging with slog |
-| stage-09-testing | ⬜ Next | Unit + integration tests |
-| stage-10-deployment | ⬜ Pending | Docker, multi-stage builds, docker-compose |
+| stage-09-testing | ✅ Done | Unit + integration tests |
+| stage-10-deployment | ⬜ Next | Docker, multi-stage builds, docker-compose |
 
 **Always update this table when a stage is completed.**
 

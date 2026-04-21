@@ -10,6 +10,7 @@ vendor/
 .env
 .env.*
 !.env.example
+!.env.test.example
 
 # OS
 .DS_Store
