@@ -23,8 +23,8 @@ A step-by-step Go backend learning project. Each stage is self-contained and bui
 | stage-05-auth | ✅ Done | bcrypt, JWT, protected routes |
 | stage-06-validation | ✅ Done | go-playground/validator, field-level errors |
 | stage-07-config | ✅ Done | godotenv, Config struct, fail-fast |
-| stage-08-logging | ⬜ Next | Structured JSON logging with slog |
-| stage-09-testing | ⬜ Pending | Unit + integration tests |
+| stage-08-logging | ✅ Done | Structured JSON logging with slog |
+| stage-09-testing | ⬜ Next | Unit + integration tests |
 | stage-10-deployment | ⬜ Pending | Docker, multi-stage builds, docker-compose |
 
 **Always update this table when a stage is completed.**
