@@ -1,0 +1,151 @@
+### Stage-10: Deployment — REST Client tests
+### Run with: docker compose up --build
+### Server: http://localhost:8080
+
+@base = http://localhost:8080
+
+# ─────────────────────────────────────────────────────────────
+# Health check (always test this first — proves server is up)
+# Expected: 200 {"status":"ok","env":"production"}
+# ─────────────────────────────────────────────────────────────
+GET {{base}}/health
+
+###
+
+# ─────────────────────────────────────────────────────────────
+# Auth: Register a new user
+# Expected: 201 Created with user JSON (no password_hash)
+# ─────────────────────────────────────────────────────────────
+POST {{base}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Akshad Jaiswal",
+  "email": "akshad@example.com",
+  "password": "securepassword123"
+}
+
+###
+
+# Auth: Register with duplicate email
+# Expected: 409 Conflict
+POST {{base}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Duplicate User",
+  "email": "akshad@example.com",
+  "password": "anotherpassword"
+}
+
+###
+
+# Auth: Register with invalid data
+# Expected: 422 Unprocessable Entity with field errors
+POST {{base}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "A",
+  "email": "not-an-email",
+  "password": "short"
+}
+
+###
+
+# ─────────────────────────────────────────────────────────────
+# Auth: Login
+# Expected: 200 with {"token": "...", "user": {...}}
+# Copy the token value and paste it below as @token
+# ─────────────────────────────────────────────────────────────
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "akshad@example.com",
+  "password": "securepassword123"
+}
+
+###
+
+# Auth: Login with wrong password
+# Expected: 401 Unauthorized
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "akshad@example.com",
+  "password": "wrongpassword"
+}
+
+###
+
+# ─────────────────────────────────────────────────────────────
+# Protected routes — paste your JWT token here
+# ─────────────────────────────────────────────────────────────
+@token = PASTE_TOKEN_HERE
+
+# List all users
+# Expected: 200 with array of users
+GET {{base}}/api/v1/users
+Authorization: Bearer {{token}}
+
+###
+
+# Create a user (admin — no password)
+# Expected: 201 Created
+POST {{base}}/api/v1/users
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "testuser@example.com"
+}
+
+###
+
+# Get specific user — paste a real UUID from the list above
+# Expected: 200 with user JSON
+GET {{base}}/api/v1/users/PASTE_USER_ID_HERE
+Authorization: Bearer {{token}}
+
+###
+
+# Get user with invalid UUID
+# Expected: 400 Bad Request
+GET {{base}}/api/v1/users/not-a-uuid
+Authorization: Bearer {{token}}
+
+###
+
+# Update a user
+# Expected: 200 with updated user
+PUT {{base}}/api/v1/users/PASTE_USER_ID_HERE
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Updated Name",
+  "email": "updated@example.com"
+}
+
+###
+
+# Delete a user
+# Expected: 204 No Content
+DELETE {{base}}/api/v1/users/PASTE_USER_ID_HERE
+Authorization: Bearer {{token}}
+
+###
+
+# Access protected route without token
+# Expected: 401 Unauthorized
+GET {{base}}/api/v1/users
+
+###
+
+# Access protected route with invalid token
+# Expected: 401 Unauthorized
+GET {{base}}/api/v1/users
+Authorization: Bearer invalid.token.here
