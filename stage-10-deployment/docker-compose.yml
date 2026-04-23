@@ -1,0 +1,91 @@
+# docker-compose.yml — wires the Go app and PostgreSQL together
+#
+# What docker-compose does:
+# ──────────────────────────
+# Defines multiple "services" (containers) that run together as one application.
+# Each service has its own image, environment, ports, and dependencies.
+# They share a private Docker network — can reach each other by service name.
+#
+# How networking works:
+# ──────────────────────
+# Docker Compose creates a bridge network for all services in this file.
+# The `app` service can reach `postgres` by the hostname "postgres" —
+# Docker's internal DNS resolves it automatically. No hardcoded IPs needed.
+#
+# This is why DATABASE_URL uses "postgres" as the host:
+#   postgres://goapp:secret@postgres:5432/...
+#                           ^^^^^^^^
+#                    service name = hostname
+
+services:
+
+  # ─────────────────────────────────────────────────────────────
+  # PostgreSQL database
+  # ─────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine  # Alpine = tiny image, same PostgreSQL
+    environment:
+      POSTGRES_USER: goapp
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: go_backend_production_stage10
+    volumes:
+      # Named volume: database data persists across container restarts.
+      # Without this, every `docker compose down` wipes all your data.
+      - postgres_data:/var/lib/postgresql/data
+
+      # Auto-migration: PostgreSQL runs all .sql files in initdb.d on first start.
+      # This means our schema is applied automatically — no manual migration step!
+      # ⚠️  Only runs when the data volume is EMPTY (first start or after `down -v`).
+      - ./migrations:/docker-entrypoint-initdb.d
+
+    # Health check: compose waits for postgres to be actually ready
+    # before starting the app. Without this, the app might start before
+    # postgres is listening and fail to connect.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U goapp -d go_backend_production_stage10"]
+      interval: 5s   # check every 5 seconds
+      timeout: 5s    # fail if no response within 5 seconds
+      retries: 5     # mark unhealthy after 5 consecutive failures
+
+  # ─────────────────────────────────────────────────────────────
+  # Go application
+  # ─────────────────────────────────────────────────────────────
+  app:
+    build:
+      context: ../..  # Docker build context = repo root (where go.mod lives)
+                      # Must be the root because the Dockerfile copies the whole module
+      dockerfile: stage-10-deployment/Dockerfile
+
+    ports:
+      # host:container — publish container port 8080 on host port 8080
+      # Access the app at http://localhost:8080
+      - "8080:8080"
+
+    # Environment variables injected into the container at runtime.
+    # The Go app reads these via os.Getenv() (through config.Load()).
+    # No .env file needed inside the container — Docker provides the env.
+    environment:
+      PORT: "8080"
+      ENV: production          # enables JSON logging
+
+      # DATABASE_URL uses the postgres SERVICE NAME as host — not localhost!
+      # Docker's internal DNS resolves "postgres" to the DB container's IP.
+      DATABASE_URL: postgres://goapp:secret@postgres:5432/go_backend_production_stage10?sslmode=disable
+
+      # ⚠️  Change this to a long random string for real production deployments.
+      # Generate one: openssl rand -hex 32
+      JWT_SECRET: change-this-in-real-production-use-openssl-rand-hex-32
+
+      JWT_EXPIRY_HOURS: "24"
+
+    # depends_on ensures postgres is healthy before the app starts.
+    # Without this, the app might try to connect before postgres is ready.
+    depends_on:
+      postgres:
+        condition: service_healthy  # waits for the health check above to pass
+
+# Named volumes persist data across container restarts.
+# `docker compose down` keeps the volume.
+# `docker compose down -v` removes it (fresh DB on next start).
+volumes:
+  postgres_data:

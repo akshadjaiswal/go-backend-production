@@ -1,0 +1,37 @@
+# .dockerignore — files excluded from the Docker build context
+#
+# The build context is everything sent to the Docker daemon when you run
+# `docker compose up --build`. Smaller context = faster builds.
+#
+# These files are not needed inside the container:
+
+# Git history — large, unnecessary at runtime
+.git
+.gitignore
+
+# Local environment files — secrets must come from docker-compose.yml environment vars,
+# never baked into the image (images can be shared or pushed to registries)
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Other stage directories — we only need stage-10 source.
+# The Dockerfile builds ./stage-10-deployment/ specifically.
+# Including other stages would make the context huge and rebuild unnecessarily.
+stage-01-basics/
+stage-02-routing/
+stage-03-middleware/
+stage-04-database/
+stage-05-auth/
+stage-06-validation/
+stage-07-config/
+stage-08-logging/
+stage-09-testing/
+
+# Markdown files — documentation not needed at runtime
+*.md
+
+# Test files — not needed in production image
+**/*_test.go
+**/testhelpers/
