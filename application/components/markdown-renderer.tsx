@@ -1,0 +1,270 @@
+import React from 'react'
+import type { ReactNode } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import rehypeSlug from 'rehype-slug'
+import rehypeRaw from 'rehype-raw'
+import { codeToHtml } from 'shiki'
+import type { Components } from 'react-markdown'
+import { CopyButton } from './copy-button'
+import { HeadingAnchor } from './heading-anchor'
+
+interface MarkdownRendererProps {
+  content: string
+  stageSlug: string
+}
+
+const CALLOUT_TYPES = {
+  NOTE:      { label: 'Note',      borderColor: 'border-[#2563EB]', bgColor: 'bg-[#EFF6FF]', textColor: 'text-[#1D4ED8]' },
+  TIP:       { label: 'Tip',       borderColor: 'border-[#16A34A]', bgColor: 'bg-[#F0FDF4]', textColor: 'text-[#15803D]' },
+  WARNING:   { label: 'Warning',   borderColor: 'border-[#D97706]', bgColor: 'bg-[#FFFBEB]', textColor: 'text-[#B45309]' },
+  IMPORTANT: { label: 'Important', borderColor: 'border-[#DC2626]', bgColor: 'bg-[#FEF2F2]', textColor: 'text-[#B91C1C]' },
+  CAUTION:   { label: 'Caution',   borderColor: 'border-[#EA580C]', bgColor: 'bg-[#FFF7ED]', textColor: 'text-[#C2410C]' },
+} as const
+
+type CalloutType = keyof typeof CALLOUT_TYPES
+
+function parseCalloutType(children: ReactNode): CalloutType | null {
+  const text = extractText(children).trimStart()
+  const match = text.match(/^\[!(NOTE|TIP|WARNING|IMPORTANT|CAUTION)\]/)
+  return match ? (match[1] as CalloutType) : null
+}
+
+function stripCalloutMarker(children: ReactNode): ReactNode {
+  if (Array.isArray(children)) {
+    const [first, ...rest] = children as ReactNode[]
+    return [stripCalloutMarker(first), ...rest].filter(Boolean)
+  }
+  if (typeof children === 'string') {
+    return children.replace(/^\[!(NOTE|TIP|WARNING|IMPORTANT|CAUTION)\]\s*/, '')
+  }
+  if (children && typeof children === 'object' && 'props' in children) {
+    const el = children as React.ReactElement<{ children?: ReactNode }>
+    return React.cloneElement(el, {}, stripCalloutMarker(el.props.children))
+  }
+  return children
+}
+
+function extractText(node: ReactNode): string {
+  if (typeof node === 'string') return node
+  if (typeof node === 'number') return String(node)
+  if (Array.isArray(node)) return node.map(extractText).join('')
+  if (node && typeof node === 'object' && 'props' in node) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return extractText((node as any).props?.children)
+  }
+  return ''
+}
+
+async function highlightCodeBlocks(markdown: string): Promise<string> {
+  const fenceRe = /^```(\w*)\n([\s\S]*?)^```/gm
+  const blocks: Array<{ placeholder: string; replacement: string }> = []
+
+  let match: RegExpExecArray | null
+  while ((match = fenceRe.exec(markdown)) !== null) {
+    const lang = match[1] || 'text'
+    const code = match[2].replace(/\n$/, '')
+    const placeholder = `%%SHIKI_BLOCK_${blocks.length}%%`
+
+    try {
+      const htmlLight = await codeToHtml(code, { lang, theme: 'github-light' })
+      const htmlDark  = await codeToHtml(code, { lang, theme: 'github-dark' })
+      blocks.push({
+        placeholder,
+        replacement: `<div data-shiki><div class="shiki-light">${htmlLight}</div><div class="shiki-dark">${htmlDark}</div></div>`,
+      })
+    } catch {
+      blocks.push({ placeholder, replacement: match[0] })
+    }
+  }
+
+  let blockIndex = 0
+  let result = markdown.replace(fenceRe, () => {
+    return blocks[blockIndex++].placeholder
+  })
+
+  for (const b of blocks) {
+    result = result.replace(b.placeholder, b.replacement)
+  }
+
+  return result
+}
+
+export async function MarkdownRenderer({ content, stageSlug }: MarkdownRendererProps) {
+  const processedContent = await highlightCodeBlocks(content)
+
+  const components: Components = {
+    h1: ({ children, ...props }) => (
+      <h1 className="font-heading text-4xl md:text-5xl font-black tracking-tight mt-12 mb-6 leading-tight" {...props}>
+        {children}
+      </h1>
+    ),
+    h2: ({ children, id, ...props }) => (
+      <h2 id={id} className="group font-heading text-2xl md:text-3xl font-bold tracking-tight mt-10 mb-4 pb-2 border-b-2 border-foreground dark:border-[#2A2A2A] flex items-baseline gap-1" {...props}>
+        {children}
+        {id && <HeadingAnchor id={id} />}
+      </h2>
+    ),
+    h3: ({ children, id, ...props }) => (
+      <h3 id={id} className="group font-heading text-xl md:text-2xl font-bold mt-8 mb-3 flex items-baseline gap-1" {...props}>
+        {children}
+        {id && <HeadingAnchor id={id} />}
+      </h3>
+    ),
+    h4: ({ children, id, ...props }) => (
+      <h4 id={id} className="group font-heading text-lg font-semibold mt-6 mb-2 flex items-baseline gap-1" {...props}>
+        {children}
+        {id && <HeadingAnchor id={id} />}
+      </h4>
+    ),
+    p: ({ children }) => (
+      <p className="font-body text-base leading-relaxed mb-4">{children}</p>
+    ),
+    ul: ({ children }) => (
+      <ul className="list-disc list-outside pl-6 mb-4 space-y-1.5 font-body text-base leading-relaxed">
+        {children}
+      </ul>
+    ),
+    ol: ({ children }) => (
+      <ol className="list-decimal list-outside pl-6 mb-4 space-y-1.5 font-body text-base leading-relaxed">
+        {children}
+      </ol>
+    ),
+    li: ({ children }) => (
+      <li className="leading-relaxed">{children}</li>
+    ),
+    div: ({ children, ...props }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const isShiki = (props as any)['data-shiki'] !== undefined
+      if (isShiki) {
+        const rawText = extractText(children)
+        return (
+          <div className="relative mb-6">
+            <CopyButton text={rawText} />
+            <div className="overflow-x-auto bg-[#fafafa] dark:bg-[#1e1e1e] border border-border-light dark:border-[#2A2A2A] border-l-[3px] border-l-accent px-5 pb-5 pt-10 shiki-wrapper">
+              {children}
+            </div>
+          </div>
+        )
+      }
+      return <div {...props}>{children}</div>
+    },
+    pre: ({ children, className }) => {
+      if (className?.includes('shiki')) {
+        return <pre className={className}>{children}</pre>
+      }
+      const rawText = extractText(children)
+      return (
+        <div className="relative mb-6">
+          <CopyButton text={rawText} />
+          <pre className="overflow-x-auto bg-[#fafafa] dark:bg-[#1e1e1e] border border-border-light dark:border-[#2A2A2A] border-l-[3px] border-l-accent p-5 font-mono text-sm leading-7 pt-10">
+            {children}
+          </pre>
+        </div>
+      )
+    },
+    code: ({ className, children, ...props }) => {
+      const isBlock = className?.startsWith('language-')
+      if (isBlock) {
+        return (
+          <code className="font-mono" {...props}>
+            {children}
+          </code>
+        )
+      }
+      return (
+        <code className="font-mono text-sm bg-[#e8f4f8] dark:bg-[#0A2A38] dark:text-[#7DD3F0] border border-border-light dark:border-[#1A3A4A] px-1.5 py-0.5">
+          {children}
+        </code>
+      )
+    },
+    table: ({ children }) => (
+      <div className="overflow-x-auto mb-6">
+        <table className="w-full border-collapse border-2 border-foreground dark:border-[#2A2A2A] font-body text-sm">
+          {children}
+        </table>
+      </div>
+    ),
+    thead: ({ children }) => (
+      <thead className="bg-foreground dark:bg-[#FAFAFA] text-background dark:text-[#0A0A0A]">{children}</thead>
+    ),
+    th: ({ children }) => (
+      <th className="border border-foreground dark:border-[#2A2A2A] p-3 text-left font-heading font-bold">
+        {children}
+      </th>
+    ),
+    td: ({ children }) => (
+      <td className="border border-foreground dark:border-[#2A2A2A] p-3">{children}</td>
+    ),
+    img: ({ src, alt }) => {
+      if (!src || typeof src !== 'string') return null
+      let imageSrc = src
+      if (src.startsWith('./')) {
+        const cleaned = decodeURIComponent(src)
+          .replace('./', '')
+          .replace(/^images\//, '')
+        imageSrc = `/stage-images/${stageSlug}/${cleaned}`
+      } else if (!src.startsWith('http') && !src.startsWith('/')) {
+        const cleaned = decodeURIComponent(src)
+          .replace(/^images\//, '')
+        imageSrc = `/stage-images/${stageSlug}/${cleaned}`
+      }
+      return (
+        <span className="block my-6">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={imageSrc}
+            alt={alt || ''}
+            className="max-w-full border-2 border-foreground"
+          />
+        </span>
+      )
+    },
+    hr: () => <div className="h-1 bg-foreground my-8" />,
+    a: ({ href, children }) => (
+      <a
+        href={href}
+        className="underline underline-offset-4 decoration-1 hover:bg-foreground hover:text-background hover:no-underline px-0.5 transition-colors duration-100"
+        target={href?.startsWith('http') ? '_blank' : undefined}
+        rel={href?.startsWith('http') ? 'noopener noreferrer' : undefined}
+      >
+        {children}
+      </a>
+    ),
+    blockquote: ({ children }) => {
+      const calloutType = parseCalloutType(children)
+      if (calloutType) {
+        const config = CALLOUT_TYPES[calloutType]
+        const body = stripCalloutMarker(children)
+        return (
+          <div className={`border-l-4 ${config.borderColor} ${config.bgColor} pl-4 pr-4 py-3 my-6 not-italic`}>
+            <div className={`font-mono text-[11px] tracking-widest uppercase font-bold mb-2 ${config.textColor}`}>
+              {config.label}
+            </div>
+            <div className="font-body text-foreground text-base leading-relaxed">
+              {body}
+            </div>
+          </div>
+        )
+      }
+      return (
+        <blockquote className="border-l-4 border-foreground dark:border-[#2A2A2A] pl-6 my-6 font-body italic text-muted-foreground dark:text-[#A3A3A3]">
+          {children}
+        </blockquote>
+      )
+    },
+    strong: ({ children }) => (
+      <strong className="font-bold">{children}</strong>
+    ),
+  }
+
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      rehypePlugins={[rehypeSlug, rehypeRaw]}
+      components={components}
+    >
+      {processedContent}
+    </ReactMarkdown>
+  )
+}
