@@ -12,6 +12,13 @@ export function TableOfContents({ headings }: TableOfContentsProps) {
   const [scrollPct, setScrollPct] = useState(0)
 
   useEffect(() => {
+    // In split-layout mode the docs pane scrolls instead of window.
+    // The docs pane div has id="docs-pane" — detect it by checking clientWidth > 0.
+    const paneEl = document.getElementById('docs-pane')
+    const inSplitMode = paneEl !== null && paneEl.clientWidth > 0
+
+    const scrollRoot = inSplitMode ? paneEl : null  // null = viewport for IntersectionObserver
+
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
@@ -20,7 +27,7 @@ export function TableOfContents({ headings }: TableOfContentsProps) {
           }
         }
       },
-      { rootMargin: '-80px 0px -80% 0px' }
+      { rootMargin: '-80px 0px -80% 0px', root: scrollRoot },
     )
 
     headings.forEach((h) => {
@@ -29,15 +36,22 @@ export function TableOfContents({ headings }: TableOfContentsProps) {
     })
 
     function onScroll() {
-      const scrollable = document.body.scrollHeight - window.innerHeight
-      setScrollPct(scrollable > 0 ? Math.round((window.scrollY / scrollable) * 100) : 0)
+      if (inSplitMode && paneEl) {
+        const scrollable = paneEl.scrollHeight - paneEl.clientHeight
+        setScrollPct(scrollable > 0 ? Math.round((paneEl.scrollTop / scrollable) * 100) : 0)
+      } else {
+        const scrollable = document.body.scrollHeight - window.innerHeight
+        setScrollPct(scrollable > 0 ? Math.round((window.scrollY / scrollable) * 100) : 0)
+      }
     }
+
     onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
+    const eventTarget: EventTarget = inSplitMode && paneEl ? paneEl : window
+    eventTarget.addEventListener('scroll', onScroll, { passive: true })
 
     return () => {
       observer.disconnect()
-      window.removeEventListener('scroll', onScroll)
+      eventTarget.removeEventListener('scroll', onScroll)
     }
   }, [headings])
 
