@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Height of the sticky header — used for split layout calc */
+  --header-h: 53px;
+}
+
 @layer base {
   * {
     border-color: theme('colors.border-light');
@@ -97,6 +102,59 @@
   html.dark .shiki-light { display: none; }
   html.dark .shiki-dark  { display: block; }
 
+  /* Split layout — drag handle prevents text selection while resizing */
+  body.dragging-split {
+    cursor: col-resize !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+  }
+
+  /* Code pane — always dark regardless of theme (editor aesthetic) */
+  .code-pane .shiki-light { display: none !important; }
+  .code-pane .shiki-dark  { display: block !important; }
+  .code-pane .shiki {
+    background-color: #1e1e1e !important;
+  }
+
+  /* Code pane — wrap long lines instead of horizontal scroll */
+  .code-pane pre {
+    white-space: pre-wrap !important;
+    word-break: break-all !important;
+    overflow-x: visible !important;
+  }
+
+  /* Code pane — tight VS Code line height, override global leading-7 */
+  .code-pane .shiki,
+  .code-pane pre,
+  .code-pane code {
+    line-height: 1.5 !important;
+    font-size: 13px !important;
+  }
+
+  /* Code pane — CSS counter line numbers, always in sync with wrapped rendering */
+  .code-pane code {
+    counter-reset: line;
+  }
+  .code-pane .line {
+    display: block;
+    counter-increment: line;
+    padding-left: 3rem;
+    position: relative;
+    min-height: 1.5em;
+  }
+  .code-pane .line::before {
+    content: counter(line);
+    position: absolute;
+    left: 0;
+    width: 2.25rem;
+    text-align: right;
+    color: #858585;
+    font-size: 13px;
+    line-height: 1.5;
+    user-select: none;
+    pointer-events: none;
+  }
+
   /* Inline code inside table headers — transparent bg so it reads on the black thead */
   thead code {
     background: transparent !important;
@@ -137,4 +195,8 @@
 
   h2, h3 { page-break-after: avoid; }
   pre, blockquote { page-break-inside: avoid; }
+
+  /* Split layout print — show only docs, hide code pane */
+  .docs-pane { height: auto !important; overflow: visible !important; width: 100% !important; }
+  .code-pane-wrapper { display: none !important; }
 }
