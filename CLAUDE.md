@@ -167,6 +167,38 @@ Every stage README must have:
 
 ---
 
+## Documentation web app
+
+A Next.js 16 documentation site lives at `application/` — it turns the stage READMEs into a navigable, searchable learning platform.
+
+### Running the docs app
+
+```bash
+cd application
+npm install
+npm run dev       # localhost:3000
+npm run build     # production build (runs prebuild scripts first)
+```
+
+### How it works
+
+- Content is sourced at build time from the parent repo root (`application/../`)
+- Each `stage-NN-topic/README.md` becomes a documentation page at `/stages/NN-topic`
+- Search index and stage images are auto-generated at prebuild — do not edit manually
+- The app has its own `CLAUDE.md` at `application/CLAUDE.md` with full details
+
+### Tech stack
+
+| Layer | Technology |
+|-------|-----------|
+| Framework | Next.js 16 (App Router, SSG) |
+| Styling | Tailwind CSS 3, accent `#00ADD8` (Go blue) |
+| Markdown | react-markdown + Shiki dual-theme syntax highlighting |
+| Search | Fuse.js client-side fuzzy search |
+| Dark mode | class-based, localStorage `gbp_theme` key |
+
+---
+
 ## Things Akshad wants in every session
 
 - Explain every concept — he's learning Go from scratch (JS/Node background)

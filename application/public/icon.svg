@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <rect width="32" height="32" fill="#000000"/>
+  <rect x="0" y="0" width="4" height="32" fill="#00ADD8"/>
+  <text x="8" y="24" font-family="monospace" font-size="18" font-weight="900" fill="#ffffff">Go</text>
+</svg>
