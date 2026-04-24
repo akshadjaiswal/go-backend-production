@@ -2,6 +2,9 @@
 
 A step-by-step Go backend built for production — covering routing, auth, databases, logging, testing, and deployment.
 
+> **Learn online →** [go-backend-production.vercel.app](https://go-backend-production.vercel.app)
+> Browse all 10 stages with rendered docs, inline source code explorer, and fuzzy search.
+
 This repo is designed for developers who are **new to Go** but want to understand how real production backends are built. Each stage is self-contained, heavily commented, and comes with its own README explaining every concept from scratch.
 
 ---
@@ -14,14 +17,31 @@ This repo is designed for developers who are **new to Go** but want to understan
 
 ---
 
+## Documentation site
+
+The easiest way to learn from this repo is the interactive docs site:
+
+**[go-backend-production.vercel.app](https://go-backend-production.vercel.app)**
+
+- All 10 stages rendered as navigable docs pages
+- **Side-by-side split view** — docs on the left, source code explorer on the right (VS Code-style: file tree, line numbers, syntax highlighting). Drag the divider to resize.
+- Browse every file inline: `main.go`, handlers, middleware, migrations, `Dockerfile`, `.env.example`, and more — no need to clone
+- Client-side fuzzy search across all stage content (`/` to open)
+- Table of contents, reading progress, dark mode, bookmarks, keyboard shortcuts (`?` for reference)
+
+If you prefer reading code directly, clone the repo and follow the steps below.
+
+---
+
 ## How to use this repo
 
 Each stage builds on the previous one conceptually, but every stage is **independent** — you can run any stage on its own without the others.
 
-1. Read the stage's `README.md` first — it explains every concept
-2. Read the code — every file is heavily commented
-3. Run the server and test using the `requests.http` file in VS Code
-4. Move to the next stage
+1. Open the [docs site](https://go-backend-production.vercel.app) and pick a stage
+2. Read the docs on the left — the source code is live on the right in the editor pane
+3. Clone and run the stage locally to experiment with the actual code
+4. Test endpoints using the `requests.http` file in VS Code REST Client
+5. Mark the stage complete, move to the next one
 
 ---
 
@@ -84,6 +104,7 @@ curl "http://localhost:8080/hello?name=Akshad"
 ```
 go-backend-production/
 ├── go.mod                    ← single Go module for the whole repo
+├── application/              ← Next.js docs site (go-backend-production.vercel.app)
 ├── stage-01-basics/
 │   ├── main.go
 │   ├── requests.http         ← test endpoints in VS Code
