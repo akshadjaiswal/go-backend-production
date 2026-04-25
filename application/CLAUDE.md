@@ -62,8 +62,14 @@ application/
 │   ├── sidebar-client.tsx      # Client: collapsible nav, mobile overlay, completion, progress
 │   ├── header.tsx              # Sticky header with search, shortcuts, theme, GitHub link
 │   ├── markdown-renderer.tsx   # Async RSC: Shiki dual-theme + callouts + HeadingAnchor
-│   ├── table-of-contents.tsx   # Client: sticky TOC with scroll % indicator
+│   ├── table-of-contents.tsx   # Client: sticky TOC with scroll % — aware of docs-pane scroll root
 │   ├── stage-nav.tsx           # Prev/Next stage links with read time
+│   ├── stage-header.tsx        # RSC: stage title + metadata + bookmark/complete/print buttons
+│   ├── split-layout.tsx        # Client: docs+code side-by-side on lg+, stacked on mobile
+│   ├── code-pane.tsx           # Async RSC: highlights all stage source files with shiki
+│   ├── code-pane-client.tsx    # Client: VS Code-style UI — tabs, file tree, code area, status bar
+│   ├── code-explorer.tsx       # Async RSC: simpler code viewer (used standalone if needed)
+│   ├── code-explorer-client.tsx # Client: directory tabs + file list + code viewer
 │   ├── copy-button.tsx         # Copy code button for code blocks
 │   ├── reading-progress.tsx    # Blue progress bar at top of page
 │   ├── search-modal.tsx        # Fuse.js search modal
@@ -105,6 +111,7 @@ application/
 - `getGroups(): Group[]` — 3 groups with nested stage lists
 - `dirNameToSlug(dirName: string): string` — strips `stage-` prefix
 - `getSearchIndex()` — used by generate-search-index.mjs
+- `getStageFiles(dirName: string): StageFileGroup[]` — reads all source files for a stage (`.go`, `.sql`, `.http`, `.env.example`, `.yml`, `Dockerfile`, `.dockerignore`); sorted by directory then by name with `main.go` pinned first
 
 ## Groups
 
@@ -126,6 +133,28 @@ application/
 - **No border-radius, no box-shadow** — everything is sharp-cornered by design
 - **Dark mode**: class-based with localStorage sync; blocking inline script prevents FOUC
 
+## Stage page layout (split view)
+
+On `lg+` (≥1024px) the stage page renders a **side-by-side split layout**:
+- **Left pane** (`id="docs-pane"`): rendered README, TOC (xl+), stage nav — scrolls independently
+- **Right pane**: VS Code-style code explorer (always dark) — sticky, fills viewport height
+- **Drag handle**: 4px divider between panes, draggable to resize, ratio persisted in localStorage
+
+On mobile (< lg): stacked — docs first, then code explorer below.
+
+The `SplitLayout` client component owns the drag/resize logic. The `CodePane` RSC pre-highlights all source files with shiki at build time and passes them to `CodePaneClient` which renders the editor UI.
+
+### CSS variable
+```css
+:root { --header-h: 53px; }  /* height of sticky header — used for calc(100vh - var(--header-h)) */
+```
+
+### Code pane always-dark
+`.code-pane .shiki-light { display: none !important }` — in `globals.css`. The code pane is always dark regardless of theme. This is intentional (editor aesthetic).
+
+### TOC scroll root
+`TableOfContents` detects split mode by checking `document.getElementById('docs-pane')`. If found (clientWidth > 0), it uses the docs pane element as the `IntersectionObserver root` and scroll event target instead of `window`.
+
 ## localStorage keys
 
 | Key | Purpose |
@@ -134,6 +163,7 @@ application/
 | `gbp_bookmark` | Explicitly bookmarked stage |
 | `gbp_completed` | JSON array of completed stage slugs |
 | `gbp_theme` | `'light'` / `'dark'` / `'system'` |
+| `gbp_split_ratio` | Docs/code pane width ratio (integer 25–75, default 55) |
 
 ## Data types
 
@@ -168,6 +198,33 @@ The `prebuild` script runs:
 1. `node scripts/copy-stage-images.mjs` — copies images from stage dirs to public/stage-images/
 2. `node scripts/generate-search-index.mjs` — writes public/search-index.json
 
+## Data types
+
+### `StageFile` + `StageFileGroup` (`types/stage.ts`)
+```ts
+interface StageFile {
+  path: string      // relative: "handlers/auth.go"
+  filename: string  // basename: "auth.go"
+  dir: string       // "handlers" | "." for root-level files
+  content: string   // raw text
+  lang: string      // shiki language id: "go" | "sql" | "yaml" | "ini" | etc.
+}
+
+interface StageFileGroup {
+  dir: string
+  files: StageFile[]
+}
+```
+
+### `HighlightedFile` (local to `code-pane.tsx` / `code-explorer.tsx`)
+```ts
+interface HighlightedFile {
+  path: string; filename: string; dir: string; lang: string
+  rawContent: string; lightHtml: string; darkHtml: string
+  lineCount: number   // code-pane only — used for line number gutter
+}
+```
+
 ## Do not
 
 - Do NOT move content into `application/` — source from parent repo at build time
@@ -177,3 +234,6 @@ The `prebuild` script runs:
 - Do NOT use `@shikijs/rehype` as a rehype plugin — use `codeToHtml()` directly
 - Do NOT edit `public/search-index.json` or `public/stage-images/` manually — auto-generated
 - Do NOT delete `public/fonts/PlayfairDisplay.ttf` — required for OG image generation
+- Do NOT change `--header-h` in globals.css without also measuring the actual header height
+- Do NOT expose real `.env` files in `getStageFiles()` — only `.env.example` and `.env.test.example`
+- Do NOT use `@shikijs/rehype` as a rehype plugin — use `codeToHtml()` directly

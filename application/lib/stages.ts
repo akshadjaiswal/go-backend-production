@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import type { Stage, StageMeta, TocHeading, Group } from '@/types/stage'
+import type { Stage, StageMeta, TocHeading, Group, StageFile, StageFileGroup } from '@/types/stage'
 
 // Content is read from the parent repo at build time.
 // application/ → go-backend-production/ (one level up)
@@ -182,4 +182,129 @@ export function getSearchIndex() {
     number: s.number,
     groupLabel: s.groupLabel,
   }))
+}
+
+// ── Code Explorer ───────────────────────────────────────────────────────────
+
+const EXT_TO_LANG: Record<string, string> = {
+  '.go':   'go',
+  '.sql':  'sql',
+  '.http': 'http',
+  '.yml':  'yaml',
+  '.yaml': 'yaml',
+  '.json': 'json',
+  '.sh':   'bash',
+  '.toml': 'toml',
+  '.mod':  'go',
+}
+
+const NAME_TO_LANG: Record<string, string> = {
+  'Dockerfile':          'dockerfile',
+  '.dockerignore':       'plaintext',
+  '.env.example':        'ini',
+  '.env.test.example':   'ini',
+}
+
+function detectLang(filename: string): string {
+  if (NAME_TO_LANG[filename]) return NAME_TO_LANG[filename]
+  const ext = path.extname(filename)
+  return EXT_TO_LANG[ext] ?? 'text'
+}
+
+function isAllowed(filename: string): boolean {
+  // Explicit names
+  if (NAME_TO_LANG[filename]) return true
+  // Extension allowlist
+  const ext = path.extname(filename)
+  const allowedExts = new Set(['.go', '.sql', '.http', '.yml', '.yaml'])
+  return allowedExts.has(ext)
+}
+
+const DIR_ORDER = [
+  '.', 'handlers', 'middleware', 'routes', 'models',
+  'db', 'config', 'logger', 'migrations', 'validator', 'testhelpers',
+]
+
+function collectFiles(stageDirPath: string): StageFile[] {
+  const results: StageFile[] = []
+
+  function walk(dirPath: string, relDir: string) {
+    let entries: fs.Dirent[]
+    try {
+      entries = fs.readdirSync(dirPath, { withFileTypes: true })
+    } catch {
+      return
+    }
+
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        // Only recurse one level — no stage has deeper nesting
+        // Skip hidden dirs, but allow normal subdirs
+        if (relDir === '.' && !entry.name.startsWith('.')) {
+          walk(path.join(dirPath, entry.name), entry.name)
+        }
+      } else if (isAllowed(entry.name)) {
+        const filePath = relDir === '.' ? entry.name : `${relDir}/${entry.name}`
+        let content = ''
+        try {
+          content = fs.readFileSync(path.join(dirPath, entry.name), 'utf-8')
+        } catch {
+          continue
+        }
+        results.push({
+          path: filePath,
+          filename: entry.name,
+          dir: relDir,
+          content,
+          lang: detectLang(entry.name),
+        })
+      }
+    }
+  }
+
+  walk(stageDirPath, '.')
+  return results
+}
+
+export function getStageFiles(dirName: string): StageFileGroup[] {
+  const stageDirPath = path.join(CONTENT_ROOT, dirName)
+  const files = collectFiles(stageDirPath)
+
+  if (files.length === 0) return []
+
+  // Group by directory
+  const map = new Map<string, StageFile[]>()
+  for (const f of files) {
+    const arr = map.get(f.dir) ?? []
+    arr.push(f)
+    map.set(f.dir, arr)
+  }
+
+  // Sort files within each group
+  for (const [dir, arr] of map) {
+    arr.sort((a, b) => {
+      // Pin main.go first in root
+      if (dir === '.') {
+        if (a.filename === 'main.go') return -1
+        if (b.filename === 'main.go') return 1
+      }
+      // Non-test files before _test.go files
+      const aTest = a.filename.endsWith('_test.go')
+      const bTest = b.filename.endsWith('_test.go')
+      if (aTest !== bTest) return aTest ? 1 : -1
+      return a.filename.localeCompare(b.filename)
+    })
+  }
+
+  // Sort directory groups by DIR_ORDER
+  const dirs = [...map.keys()].sort((a, b) => {
+    const ai = DIR_ORDER.indexOf(a)
+    const bi = DIR_ORDER.indexOf(b)
+    if (ai !== -1 && bi !== -1) return ai - bi
+    if (ai !== -1) return -1
+    if (bi !== -1) return 1
+    return a.localeCompare(b)
+  })
+
+  return dirs.map((dir) => ({ dir, files: map.get(dir)! }))
 }
