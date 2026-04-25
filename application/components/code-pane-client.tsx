@@ -60,6 +60,7 @@ export function CodePaneClient({ files, dirs }: CodePaneClientProps) {
         {/* Tree toggle button */}
         <button
           onClick={() => setTreeOpen((o) => !o)}
+          aria-label={treeOpen ? 'Collapse file tree' : 'Expand file tree'}
           title={treeOpen ? 'Collapse file tree' : 'Expand file tree'}
           className="shrink-0 px-3 py-2 text-[#858585] hover:text-white hover:bg-[#2D2D2D] transition-colors duration-100 font-mono text-xs border-l border-[#3E3E42]"
         >
