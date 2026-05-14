@@ -26,8 +26,8 @@ type CalloutType = keyof typeof CALLOUT_TYPES
 
 function parseCalloutType(children: ReactNode): CalloutType | null {
   const text = extractText(children).trimStart()
-  const match = text.match(/^\[!(NOTE|TIP|WARNING|IMPORTANT|CAUTION)\]/)
-  return match ? (match[1] as CalloutType) : null
+  const match = text.match(/^\[!(NOTE|TIP|WARNING|IMPORTANT|CAUTION)\]/i)
+  return match ? (match[1].toUpperCase() as CalloutType) : null
 }
 
 function stripCalloutMarker(children: ReactNode): ReactNode {
@@ -36,7 +36,7 @@ function stripCalloutMarker(children: ReactNode): ReactNode {
     return [stripCalloutMarker(first), ...rest].filter(Boolean)
   }
   if (typeof children === 'string') {
-    return children.replace(/^\[!(NOTE|TIP|WARNING|IMPORTANT|CAUTION)\]\s*/, '')
+    return children.replace(/^\[!(NOTE|TIP|WARNING|IMPORTANT|CAUTION)\]\s*/i, '')
   }
   if (children && typeof children === 'object' && 'props' in children) {
     const el = children as React.ReactElement<{ children?: ReactNode }>

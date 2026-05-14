@@ -5,14 +5,19 @@ export function ReadingProgress() {
   const [progress, setProgress] = useState(0)
 
   useEffect(() => {
+    const pane = document.getElementById('docs-pane')
+    const target = pane && pane.clientWidth > 0 ? pane : null
+
     function onScroll() {
-      const el = document.documentElement
+      const el = target ?? document.documentElement
       const scrolled = el.scrollTop
       const total = el.scrollHeight - el.clientHeight
       setProgress(total > 0 ? (scrolled / total) * 100 : 0)
     }
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
+
+    const eventTarget: Window | HTMLElement = target ?? window
+    eventTarget.addEventListener('scroll', onScroll, { passive: true })
+    return () => eventTarget.removeEventListener('scroll', onScroll)
   }, [])
 
   return (
