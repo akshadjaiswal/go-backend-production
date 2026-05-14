@@ -20,6 +20,10 @@ interface SearchModalProps {
   onClose: () => void
 }
 
+// module-level cache — survives open/close cycles within a page session
+let cachedEntries: SearchEntry[] | null = null
+let cachedFuse: Fuse<SearchEntry> | null = null
+
 function escapeRegex(str: string) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
@@ -66,27 +70,35 @@ export function SearchModal({ onClose }: SearchModalProps) {
   const [fuse, setFuse] = useState<Fuse<SearchEntry> | null>(null)
   const [allEntries, setAllEntries] = useState<SearchEntry[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
+  const modalRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
   useEffect(() => {
+    if (cachedEntries && cachedFuse) {
+      setAllEntries(cachedEntries)
+      setFuse(cachedFuse)
+      setResults(cachedEntries.slice(0, 8).map((item) => ({ item, snippet: null })))
+      return
+    }
     fetch('/search-index.json')
       .then((r) => r.json())
       .then((data: SearchEntry[]) => {
+        const fuseInstance = new Fuse(data, {
+          keys: [
+            { name: 'title', weight: 0.6 },
+            { name: 'content', weight: 0.3 },
+            { name: 'groupLabel', weight: 0.1 },
+          ],
+          threshold: 0.3,
+          ignoreLocation: true,
+          minMatchCharLength: 2,
+          includeScore: true,
+          includeMatches: true,
+        })
+        cachedEntries = data
+        cachedFuse = fuseInstance
         setAllEntries(data)
-        setFuse(
-          new Fuse(data, {
-            keys: [
-              { name: 'title', weight: 0.6 },
-              { name: 'content', weight: 0.3 },
-              { name: 'groupLabel', weight: 0.1 },
-            ],
-            threshold: 0.3,
-            ignoreLocation: true,
-            minMatchCharLength: 2,
-            includeScore: true,
-            includeMatches: true,
-          })
-        )
+        setFuse(fuseInstance)
         setResults(data.slice(0, 8).map((item) => ({ item, snippet: null })))
       })
   }, [])
@@ -117,7 +129,23 @@ export function SearchModal({ onClose }: SearchModalProps) {
     [router, onClose]
   )
 
+  function trapFocus(e: React.KeyboardEvent) {
+    if (e.key !== 'Tab') return
+    const focusable = modalRef.current?.querySelectorAll<HTMLElement>(
+      'button, input, a[href], [tabindex]:not([tabindex="-1"])'
+    )
+    if (!focusable || focusable.length === 0) return
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+    if (e.shiftKey) {
+      if (document.activeElement === first) { e.preventDefault(); last.focus() }
+    } else {
+      if (document.activeElement === last) { e.preventDefault(); first.focus() }
+    }
+  }
+
   function handleKeyDown(e: React.KeyboardEvent) {
+    trapFocus(e)
     if (e.key === 'Escape') {
       onClose()
     } else if (e.key === 'ArrowDown') {
@@ -139,6 +167,7 @@ export function SearchModal({ onClose }: SearchModalProps) {
       <div className="absolute inset-0 bg-foreground/40 dark:bg-[#FAFAFA]/20" />
 
       <div
+        ref={modalRef}
         className="relative w-full max-w-xl border-2 border-foreground dark:border-[#FAFAFA] bg-background dark:bg-[#0A0A0A]"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}

@@ -1,5 +1,5 @@
 'use client'
-import { useEffect } from 'react'
+import { useRef } from 'react'
 
 interface ShortcutsModalProps {
   onClose: () => void
@@ -15,13 +15,27 @@ const shortcuts = [
 ]
 
 export function ShortcutsModal({ onClose }: ShortcutsModalProps) {
-  useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose()
+  const modalRef = useRef<HTMLDivElement>(null)
+
+  function trapFocus(e: React.KeyboardEvent) {
+    if (e.key !== 'Tab') return
+    const focusable = modalRef.current?.querySelectorAll<HTMLElement>(
+      'button, input, a[href], [tabindex]:not([tabindex="-1"])'
+    )
+    if (!focusable || focusable.length === 0) return
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+    if (e.shiftKey) {
+      if (document.activeElement === first) { e.preventDefault(); last.focus() }
+    } else {
+      if (document.activeElement === last) { e.preventDefault(); first.focus() }
     }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [onClose])
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    trapFocus(e)
+    if (e.key === 'Escape') onClose()
+  }
 
   return (
     <div
@@ -30,8 +44,10 @@ export function ShortcutsModal({ onClose }: ShortcutsModalProps) {
     >
       <div className="absolute inset-0 bg-foreground/40 dark:bg-[#FAFAFA]/20" />
       <div
+        ref={modalRef}
         className="relative w-full max-w-sm border-2 border-foreground dark:border-[#FAFAFA] bg-background dark:bg-[#0A0A0A]"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={handleKeyDown}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-border-light dark:border-[#2A2A2A]">
           <span className="font-mono text-xs tracking-widest uppercase">Keyboard Shortcuts</span>

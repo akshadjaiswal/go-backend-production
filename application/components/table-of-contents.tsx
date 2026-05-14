@@ -58,7 +58,7 @@ export function TableOfContents({ headings }: TableOfContentsProps) {
   if (headings.length === 0) return null
 
   return (
-    <nav className="sticky top-24">
+    <nav className="sticky" style={{ top: 'calc(var(--header-h) + 24px)' }}>
       <div className="flex items-center justify-between mb-3">
         <h4 className="font-mono text-xs font-bold uppercase tracking-widest">
           On this page
